@@ -1,0 +1,12 @@
+# python=3.10
+# download your torch >=2.30
+
+tranformers[torch]
+transformers
+datasets
+evaluate
+seqeval
+tensorboard
+numpy<2
+accelerate>=0.26.0
+pytorch-crf
