@@ -83,7 +83,7 @@ class BertForTokenClassification(BertPreTrainedModel):
         )
 
 
-class BertLstmCRF(BertPreTrainedModel):
+class BertBiLstmCRF(BertPreTrainedModel):
 
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
 
