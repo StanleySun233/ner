@@ -1,2 +1,2 @@
 import model.bert
-import mode.my_bert
+import model.my_bert
