@@ -87,6 +87,7 @@ training_args = TrainingArguments(
     weight_decay=0.01,
     save_strategy=IntervalStrategy.EPOCH,
     logging_dir='./logs',
+    no_cuda=True
 )
 
 trainer = Trainer(
