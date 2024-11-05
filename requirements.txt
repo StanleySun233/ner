@@ -3,6 +3,7 @@
 
 # required cuda>=11.6
 mamba-ssm[causal-conv1d]
+mambapy
 
 transformers
 datasets
