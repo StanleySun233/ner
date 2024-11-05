@@ -1,5 +1,5 @@
 import torch
-from transformers import AutoModelForTokenClassification, MambaModel
+from transformers import AutoModelForTokenClassification, MambaModel, MambaConfig
 from torchcrf import CRF
 from torch import nn
 from transformers import MambaPreTrainedModel
@@ -64,13 +64,11 @@ class BertBiLSTMCRF(AutoModelForTokenClassification):
             predictions = self.crf.decode(logits, mask=attention_mask.byte())
             return predictions
 
-class MambaBiLSTMCRF(AutoModelForTokenClassification):
-    def __init__(self, config, lstm_hidden_size=256):
+class MambaBiLSTMCRF(MambaPreTrainedModel):
+    def __init__(self,model_name, config:MambaConfig, lstm_hidden_size=256):
         super().__init__(config)
-
         # 使用 Mamba 模型作为编码器
-        self.mamba = MambaModel(config)
-
+        self.mamba = MambaModel.from_pretrained(model_name,config)
         # 添加 BiLSTM 层，输入大小为 Mamba 的隐藏层大小，输出大小为自定义的 lstm_hidden_size
         self.lstm = nn.LSTM(
             input_size=config.hidden_size,
