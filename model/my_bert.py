@@ -65,10 +65,10 @@ class BertBiLSTMCRF(AutoModelForTokenClassification):
             return predictions
 
 class MambaBiLSTMCRF(MambaPreTrainedModel):
-    def __init__(self,model_name, config:MambaConfig, lstm_hidden_size=256):
+    def __init__(self, config:MambaConfig, lstm_hidden_size=256):
         super().__init__(config)
         # 使用 Mamba 模型作为编码器
-        self.mamba = MambaModel.from_pretrained(model_name,config)
+        self.mamba = MambaModel.from_pretrained("state-spaces/mamba-130m-hf",config)
         # 添加 BiLSTM 层，输入大小为 Mamba 的隐藏层大小，输出大小为自定义的 lstm_hidden_size
         self.lstm = nn.LSTM(
             input_size=config.hidden_size,
