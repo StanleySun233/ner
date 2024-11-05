@@ -1,5 +1,5 @@
-# python=3.10
-# download your torch >=2.30
+# python>=3.8
+# torch >=2.3.0
 
 # tranformers[torch]
 transformers
@@ -12,3 +12,4 @@ accelerate>=0.26.0
 pytorch-crf
 jupyter
 notebook
+scikit-learn

@@ -1,10 +1,12 @@
 from collections import defaultdict
+
 from datasets import Dataset, DatasetDict, Features, Sequence, ClassLabel, Value
 from huggingface_hub import HfApi
 
 # 初始化 API
 api = HfApi()
-names = ['resume','msra','weibo']
+names = ['resume', 'msra', 'weibo']
+
 
 def load_data(file_path):
     sentences = []
@@ -49,12 +51,13 @@ def generate_label_list(sentences, labels):
             _label_list.append(f"I-{entity}")
     return _label_list
 
+
 for name in names:
     train_sentences, train_labels = load_data(f"./data/{name}/train.txt")
     test_sentences, test_labels = load_data(f"./data/{name}/test.txt")
     validation_sentences, validation_labels = load_data(f"./data/{name}/dev.txt")
 
-    label_list = generate_label_list(train_sentences,train_labels)
+    label_list = generate_label_list(train_sentences, train_labels)
 
     # 定义 ClassLabel 来自动将标签转为 ID
     label_class = ClassLabel(names=label_list)
@@ -77,12 +80,12 @@ for name in names:
     })
 
     # 将数据转化为 Hugging Face 的 Dataset 格式
-    train_data = Dataset.from_dict({"tokens": train_sentences, "ner_tags": train_labels},features=features)
+    train_data = Dataset.from_dict({"tokens": train_sentences, "ner_tags": train_labels}, features=features)
 
-    test_data = Dataset.from_dict({"tokens": test_sentences, "ner_tags": test_labels},features=features)
+    test_data = Dataset.from_dict({"tokens": test_sentences, "ner_tags": test_labels}, features=features)
 
-    validation_data = Dataset.from_dict({"tokens": validation_sentences, "ner_tags": validation_labels},features=features)
-
+    validation_data = Dataset.from_dict({"tokens": validation_sentences, "ner_tags": validation_labels},
+                                        features=features)
 
     # 合并为 DatasetDict 格式
     ner_dataset = DatasetDict({"train": train_data, "test": test_data, "validation": validation_data})

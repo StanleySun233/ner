@@ -1,6 +1,6 @@
 from datasets import load_dataset
-from sklearn.metrics import classification_report, f1_score
-from transformers import BertTokenizerFast, Trainer, TrainingArguments
+from sklearn.metrics import classification_report, f1_score, accuracy_score, precision_score, recall_score
+from transformers import BertTokenizer, Trainer, TrainingArguments
 from transformers.trainer_utils import IntervalStrategy
 
 from model.bert import BertCRF
@@ -8,8 +8,8 @@ from model.bert import BertCRF
 train_dataset, test_dataset = load_dataset('conll2003', split=['train', 'test'])
 print(train_dataset, test_dataset)
 
-model = BertCRF.from_pretrained('bert-base-uncased', num_labels=9)
-tokenizer = BertTokenizerFast.from_pretrained('bert-base-uncased')
+model = BertCRF.from_pretrained('bert-base-cased', num_labels=9)
+tokenizer = BertTokenizer.from_pretrained('bert-base-cased')
 
 
 def tokenize(batch):
@@ -66,9 +66,15 @@ def compute_metrics(pred):
     labels = pred.label_ids.flatten()
     preds = pred.predictions.flatten()
     f1 = f1_score(labels, preds, average='macro')
+    acc = accuracy_score(labels, preds, average='macro')
+    prec = precision_score(labels, preds, average='macro')
+    recall = recall_score(labels, preds, average='macro')
     print(classification_report(labels, preds))
     return {
-        'f1': f1
+        'f1': f1,
+        'accuracy': acc,
+        'precision': prec,
+        'recall': recall
     }
 
 
