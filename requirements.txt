@@ -13,3 +13,4 @@ pytorch-crf
 jupyter
 notebook
 scikit-learn
+huggingface_hub
