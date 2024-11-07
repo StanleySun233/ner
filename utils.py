@@ -1,14 +1,10 @@
-from datasets import load_dataset,concatenate_datasets
+import evaluate
+import numpy as np
+import torch
+from datasets import load_dataset
 from transformers import AutoTokenizer, AutoModelForTokenClassification
 from transformers import DataCollatorForTokenClassification
-from transformers import Trainer,TrainingArguments,TrainerCallback
-import numpy as np
-import evaluate
-import torch
-from torch.utils.tensorboard import SummaryWriter
-from model.my_bert import BertBiLSTMMegaCRF
-from huggingface_hub import notebook_login
-from transformers import AutoConfig
+from transformers import Trainer, TrainingArguments, AutoConfig
 
 
 def check_torch_gpu():
@@ -36,9 +32,8 @@ def check_torch_gpu():
     }
 
 
-
-def load_datasets_by_hf(dataset_name,tokenizer_name):
-    dataset = load_dataset(dataset_name,trust_remote_code=True)
+def load_datasets_by_hf(dataset_name, tokenizer_name):
+    dataset = load_dataset(dataset_name, trust_remote_code=True)
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
 
     def tokenize_and_align_labels(examples):
@@ -55,7 +50,7 @@ def load_datasets_by_hf(dataset_name,tokenizer_name):
 
     tokenized_datasets = dataset.map(tokenize_and_align_labels, batched=True)
     data_collator = DataCollatorForTokenClassification(tokenizer)
-    return tokenized_datasets, data_collator,tokenizer
+    return tokenized_datasets, data_collator, tokenizer
 
 
 def load_model_by_hf(pretrained_name, dataset, cls) -> AutoModelForTokenClassification:
@@ -74,7 +69,7 @@ def load_model_by_hf(pretrained_name, dataset, cls) -> AutoModelForTokenClassifi
     return model
 
 
-def compute_metrics(p, _label,_metrics):
+def compute_metrics(p, _label, _metrics):
     # 获取 logits，并将它们转换为预测的标签索引
     predictions = np.argmax(p.predictions, axis=2)
     references = p.label_ids
@@ -86,7 +81,7 @@ def compute_metrics(p, _label,_metrics):
     ]
 
     true_labels = [
-        [_label[label] for (pred, label) in zip(prediction, reference) if label!=-100]
+        [_label[label] for (pred, label) in zip(prediction, reference) if label != -100]
         for prediction, reference in zip(predictions, references)
     ]
 
@@ -122,7 +117,8 @@ def get_train_args(user_id, model_name, dataset_name, epoches=100, batch=32):
         hub_model_id=f"{user_id}/{model_name}-ner-{dataset_name}",
     )
 
-def get_trainer(model,training_args,tokenized_datasets,tokenizer,data_collator):
+
+def get_trainer(model, training_args, tokenized_datasets, tokenizer, data_collator, cm):
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5, weight_decay=1e-4)
 
     return Trainer(
@@ -132,11 +128,30 @@ def get_trainer(model,training_args,tokenized_datasets,tokenizer,data_collator):
         eval_dataset=tokenized_datasets["validation"],
         tokenizer=tokenizer,
         data_collator=data_collator,
-        compute_metrics=compute_metrics,
+        compute_metrics=cm,
         optimizers=(optimizer, None),
     )
 
 
-if __name__=="__main__":
-    check_torch_gpu()
+def train(dataset_name, pretrained_name, user_id, model_name, model_cls):
+    tokenized_datasets, data_collator, tokenizer = load_datasets_by_hf(dataset_name, pretrained_name)
+    model = load_model_by_hf(pretrained_name, tokenized_datasets, model_cls)
+    metric = evaluate.load("seqeval")
+    label_list = tokenized_datasets["train"].features["ner_tags"].feature.names  # 获取标签名称列表
+    s = [i for i in range(len(label_list))]
 
+    def compute_metrics_helper(pred):
+        return compute_metrics(pred, label_list, metric)
+
+    train_args = get_train_args(user_id, model_name, dataset_name.split("/")[1])
+    trainer = get_trainer(model, train_args, tokenized_datasets, tokenizer, data_collator, compute_metrics_helper)
+
+    trainer.train()
+    test_results = trainer.predict(tokenized_datasets["test"])
+    print("Result in Test:", test_results.metrics)
+
+    trainer.push_to_hub()
+
+
+if __name__ == "__main__":
+    check_torch_gpu()
