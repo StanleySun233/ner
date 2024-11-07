@@ -49,6 +49,7 @@ class BertBiLSTMCRF(AutoModelForTokenClassification):
 
         # 添加 CRF 层
         self.crf = CRF(config.num_labels, batch_first=True)
+        torch.nn.init.normal_(self.crf.transitions, mean=0, std=0.1)
 
 class BertBiLSTMMegaCRF(AutoModelForTokenClassification):
     def __init__(self, config, lstm_hidden_size=256):
@@ -71,6 +72,7 @@ class BertBiLSTMMegaCRF(AutoModelForTokenClassification):
         )
 
         # 更新线性层的输入大小以适应 BiLSTM 的输出
+
         self.classifier = nn.Linear(lstm_hidden_size * 2, config.num_labels)
 
         # 添加 CRF 层
@@ -85,13 +87,14 @@ class BertBiLSTMMegaCRF(AutoModelForTokenClassification):
         lstm_output, _ = self.lstm(sequence_output)  # (batch_size, seq_length, lstm_hidden_size * 2)
         mega_output = self.mega(lstm_output)
         # 通过线性分类器，将 lstm_output 的输出映射到标签空间
+
         logits = self.classifier(mega_output)  # (batch_size, seq_length, num_labels)
 
         # 计算损失或解码预测
         if labels is not None:
             # 计算 CRF 损失
             log_likelihood = self.crf(logits, labels, mask=attention_mask.byte())
-            return -log_likelihood  # 返回负对数似然作为损失
+            return -log_likelihood   # 返回负对数似然作为损失
         else:
             # 解码预测标签
             predictions = self.crf.decode(logits, mask=attention_mask.byte())
@@ -132,6 +135,8 @@ class BertBiLSTMDSTCRF(AutoModelForTokenClassification):
             # 解码预测标签
             predictions = self.crf.decode(logits, mask=attention_mask.byte())
             return predictions
+
+
 class MambaBiLSTMCRF(MambaPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
