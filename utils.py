@@ -133,7 +133,7 @@ def get_trainer(model, training_args, tokenized_datasets, tokenizer, data_collat
     )
 
 
-def train(dataset_name, pretrained_name, user_id, model_name, model_cls):
+def train(dataset_name, pretrained_name, user_id, model_name, model_cls,epoches=100,batch=32):
     tokenized_datasets, data_collator, tokenizer = load_datasets_by_hf(dataset_name, pretrained_name)
     model = load_model_by_hf(pretrained_name, tokenized_datasets, model_cls)
     metric = evaluate.load("seqeval")
@@ -143,7 +143,7 @@ def train(dataset_name, pretrained_name, user_id, model_name, model_cls):
     def compute_metrics_helper(pred):
         return compute_metrics(pred, label_list, metric)
 
-    train_args = get_train_args(user_id, model_name, dataset_name.split("/")[1])
+    train_args = get_train_args(user_id, model_name, dataset_name.split("/")[1],epoches,batch)
     trainer = get_trainer(model, train_args, tokenized_datasets, tokenizer, data_collator, compute_metrics_helper)
 
     trainer.train()
