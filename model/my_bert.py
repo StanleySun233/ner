@@ -1,13 +1,11 @@
 import torch
-from transformers import AutoModelForTokenClassification, MambaModel, MambaConfig
+from transformers import AutoModelForTokenClassification, MambaModel
 from torchcrf import CRF
 from torch import nn
 from transformers import MambaPreTrainedModel
-from transformers.modeling_outputs import TokenClassifierOutput
-from transformers import BertPreTrainedModel
 from mega_pytorch import MegaLayer
 
-import dst
+from model import dst
 
 
 class AutoModelForTokenClassificationWithCRF(AutoModelForTokenClassification):
@@ -51,11 +49,12 @@ class BertBiLSTMCRF(AutoModelForTokenClassification):
         self.crf = CRF(config.num_labels, batch_first=True)
         torch.nn.init.normal_(self.crf.transitions, mean=0, std=0.1)
 
+
 class BertBiLSTMMegaCRF(AutoModelForTokenClassification):
     def __init__(self, config, lstm_hidden_size=256):
         super().__init__(config)
 
-        # 添加 BiLSTM 层，输入大小为 BERT 的隐藏层大小，输出大小为自定义的 lstm_hidden_size
+        # BiLSTM 层
         self.lstm = nn.LSTM(
             input_size=config.hidden_size,
             hidden_size=lstm_hidden_size,
@@ -63,38 +62,46 @@ class BertBiLSTMMegaCRF(AutoModelForTokenClassification):
             bidirectional=True,
             batch_first=True
         )
+
+        self.dropout = nn.Dropout(0.5)
+        self.layer_norm = nn.LayerNorm(lstm_hidden_size * 2)
+
+        # MegaLayer 层
         self.mega = MegaLayer(
-            dim=lstm_hidden_size,  # model dimensions
-            ema_heads=16,  # number of EMA heads
-            attn_dim_qk=64,  # dimension of queries / keys in attention
-            attn_dim_value=256,  # dimension of values in attention
-            laplacian_attn_fn=False,  # whether to use softmax (false) or laplacian attention activation fn (true)
+            dim=lstm_hidden_size,
+            ema_heads=32,
+            attn_dim_qk=128,
+            attn_dim_value=256,
+            laplacian_attn_fn=False,
         )
 
-        # 更新线性层的输入大小以适应 BiLSTM 的输出
-
+        # 线性分类器
         self.classifier = nn.Linear(lstm_hidden_size * 2, config.num_labels)
 
-        # 添加 CRF 层
+        # CRF 层
         self.crf = CRF(config.num_labels, batch_first=True)
 
     def forward(self, input_ids=None, attention_mask=None, labels=None, **kwargs):
         # 获取 BERT 的输出
         outputs = super().forward(input_ids=input_ids, attention_mask=attention_mask, labels=None, **kwargs)
         sequence_output = outputs.last_hidden_state  # (batch_size, seq_length, hidden_size)
-
-        # 通过 BiLSTM 层
+        # sequence_output = self.dropout(sequence_output)
+        # 第一残差块：BiLSTM 层 + 残差
         lstm_output, _ = self.lstm(sequence_output)  # (batch_size, seq_length, lstm_hidden_size * 2)
-        mega_output = self.mega(lstm_output)
-        # 通过线性分类器，将 lstm_output 的输出映射到标签空间
+        lstm_output = lstm_output + sequence_output  # 将输入添加到 LSTM 输出
+        lstm_output = self.layer_norm(lstm_output)
 
-        logits = self.classifier(mega_output)  # (batch_size, seq_length, num_labels)
+        # 第二残差块：MegaLayer 层 + 残差
+        mega_output = self.mega(lstm_output)
+
+        # 第三残差块：分类器 + 残差
+        logits = self.classifier(mega_output)
 
         # 计算损失或解码预测
         if labels is not None:
             # 计算 CRF 损失
             log_likelihood = self.crf(logits, labels, mask=attention_mask.byte())
-            return -log_likelihood   # 返回负对数似然作为损失
+            return -log_likelihood  # 返回负对数似然作为损失
         else:
             # 解码预测标签
             predictions = self.crf.decode(logits, mask=attention_mask.byte())
@@ -111,7 +118,7 @@ class BertBiLSTMDSTCRF(AutoModelForTokenClassification):
             bidirectional=True,
             batch_first=True
         )
-        self.dst = dst.Dempster_Shafer_module(lstm_hidden_size * 2,config.num_labels,5)
+        self.dst = dst.Dempster_Shafer_module(lstm_hidden_size * 2, config.num_labels, 5)
         self.classifier = nn.Linear(lstm_hidden_size * 2, config.num_labels)
         self.crf = CRF(config.num_labels, batch_first=True)
 
