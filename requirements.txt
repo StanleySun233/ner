@@ -2,8 +2,8 @@
 # torch =0.13.1
 
 # required cuda>=11.6
-mamba-ssm[causal-conv1d]
-mambapy
+# mamba-ssm[causal-conv1d]
+# mambapy
 
 transformers
 datasets
@@ -17,3 +17,4 @@ jupyter
 notebook
 scikit-learn
 huggingface_hub
+mega-pytorch
