@@ -1,9 +1,17 @@
 # bert-based NER Tasks Structured by HuggingFace
+## install
+```shell
+conda create -n torch23 python=3.10 -y
 
-## reference
+conda activate torch23
+# install torch
 
-1. [transformer ner](https://github.com/shushanxingzhe/transformers_ner)
+# install torch
+pip install -r requirements.txt
+```
 
-Use the schema provided by this repository.
+## train
+see [trainer.ipynb](trainer.ipynb)
 
-2. https://github.com/state-spaces/mamba/#installation
+## test
+see [run.py](run.py)
