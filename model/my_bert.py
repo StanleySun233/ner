@@ -85,14 +85,14 @@ class BertBiLSTMMegaCRF(AutoModelForTokenClassification):
         # 获取 BERT 的输出
         outputs = super().forward(input_ids=input_ids, attention_mask=attention_mask, labels=None, **kwargs)
         sequence_output = outputs.last_hidden_state  # (batch_size, seq_length, hidden_size)
-        # sequence_output = self.dropout(sequence_output)
+        sequence_output = self.dropout(sequence_output)
         # 第一残差块：BiLSTM 层 + 残差
         lstm_output, _ = self.lstm(sequence_output)  # (batch_size, seq_length, lstm_hidden_size * 2)
         lstm_output = lstm_output + sequence_output  # 将输入添加到 LSTM 输出
         lstm_output = self.layer_norm(lstm_output)
 
         # 第二残差块：MegaLayer 层 + 残差
-        mega_output = self.mega(lstm_output)
+        mega_output = self.mega(lstm_output) + lstm_output
 
         # 第三残差块：分类器 + 残差
         logits = self.classifier(mega_output)

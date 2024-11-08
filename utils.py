@@ -32,13 +32,13 @@ def check_torch_gpu():
     }
 
 
-def load_datasets_by_hf(dataset_name, tokenizer_name):
+def load_datasets_by_hf(dataset_name, tokenizer_name,max_length=64):
     dataset = load_dataset(dataset_name, trust_remote_code=True)
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
 
     def tokenize_and_align_labels(examples):
         tokenized_inputs = tokenizer(examples["tokens"], truncation=True, padding='max_length',
-                                     is_split_into_words=True, max_length=64)
+                                     is_split_into_words=True, max_length=max_length)
         labels = []
         for i, label in enumerate(examples["ner_tags"]):
             word_ids = tokenized_inputs.word_ids(batch_index=i)
@@ -133,8 +133,8 @@ def get_trainer(model, training_args, tokenized_datasets, tokenizer, data_collat
     )
 
 
-def train(dataset_name, pretrained_name, user_id, model_name, model_cls,epoches=100,batch=32):
-    tokenized_datasets, data_collator, tokenizer = load_datasets_by_hf(dataset_name, pretrained_name)
+def train(dataset_name, pretrained_name, user_id, model_name, model_cls,epoches=100,batch=32,seq_length=32):
+    tokenized_datasets, data_collator, tokenizer = load_datasets_by_hf(dataset_name, pretrained_name,seq_length)
     model = load_model_by_hf(pretrained_name, tokenized_datasets, model_cls)
     metric = evaluate.load("seqeval")
     label_list = tokenized_datasets["train"].features["ner_tags"].feature.names  # 获取标签名称列表
