@@ -1,9 +1,7 @@
 # python>=3.8
-# torch =0.13.1
+# torch >=2.3.0
 
 # required cuda>=11.6
-# mamba-ssm[causal-conv1d]
-# mambapy
 
 transformers
 datasets
