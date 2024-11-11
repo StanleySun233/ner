@@ -101,8 +101,8 @@ def compute_metrics(p, _label, _metrics):
     }
 
 
-def get_train_args(user_id, model_name, dataset_name, epoches=100, batch=32):
-    return TrainingArguments(
+def get_train_args(user_id, model_name, dataset_name, epoches=100, batch=32,update=False):
+    train_args = TrainingArguments(
         output_dir="./results",
         evaluation_strategy="epoch",
         save_strategy="no",
@@ -114,8 +114,11 @@ def get_train_args(user_id, model_name, dataset_name, epoches=100, batch=32):
         num_train_epochs=epoches,
         fp16=False,
         push_to_hub=True,
-        hub_model_id=f"{user_id}/{model_name}-ner-{dataset_name}",
     )
+    if update:
+        train_args.hub_model_id=f"{user_id}/{model_name}-ner-{dataset_name}"
+    return train_args
+
 
 
 def get_trainer(model, training_args, tokenized_datasets, tokenizer, data_collator, cm):
@@ -133,17 +136,17 @@ def get_trainer(model, training_args, tokenized_datasets, tokenizer, data_collat
     )
 
 
-def train(dataset_name, pretrained_name, user_id, model_name, model_cls,epoches=100,batch=32,seq_length=32):
+def train(dataset_name, pretrained_name, user_id, model_name, model_cls,epoches=100,batch=32,seq_length=32,update=False):
     tokenized_datasets, data_collator, tokenizer = load_datasets_by_hf(dataset_name, pretrained_name,seq_length)
     model = load_model_by_hf(pretrained_name, tokenized_datasets, model_cls)
     metric = evaluate.load("seqeval")
     label_list = tokenized_datasets["train"].features["ner_tags"].feature.names  # 获取标签名称列表
-    s = [i for i in range(len(label_list))]
+    # s = [i for i in range(len(label_list))]
 
     def compute_metrics_helper(pred):
         return compute_metrics(pred, label_list, metric)
 
-    train_args = get_train_args(user_id, model_name, dataset_name.split("/")[1],epoches,batch)
+    train_args = get_train_args(user_id, model_name, dataset_name.split("/")[1],epoches,batch,update)
     trainer = get_trainer(model, train_args, tokenized_datasets, tokenizer, data_collator, compute_metrics_helper)
 
     trainer.train()

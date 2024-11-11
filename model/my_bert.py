@@ -160,7 +160,7 @@ class BertMegaBiLSTMCRF(AutoModelForTokenClassification):
         if labels is not None:
             # 计算 CRF 损失
             log_likelihood = self.crf(logits, labels, mask=attention_mask.byte())
-            return -log_likelihood * 10  # 返回负对数似然作为损失
+            return -log_likelihood  # 返回负对数似然作为损失
         else:
             # 解码预测标签
             predictions = self.crf.decode(logits, mask=attention_mask.byte())
@@ -211,6 +211,7 @@ class BertMegaCRF(AutoModelForTokenClassification):
             # 解码预测标签
             predictions = self.crf.decode(logits, mask=attention_mask.byte())
             return predictions
+
 # class BertBiLSTMDSTCRF(AutoModelForTokenClassification):
 #     def __init__(self, config, lstm_hidden_size=256):
 #         super().__init__(config)
